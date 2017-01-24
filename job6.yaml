@@ -23,11 +23,10 @@ actions:
     timeout:
       minutes: 3
     to: tmpfs
-    type: monitor
     images:
         zephyr:
           image_arg: -kernel {zephyr}
-          url: http://snapshots.linaro.org/components/kernel/zephyr/zephyr/qemu_cortex_m3/latest/tests/crypto/test_hmac/test/zephyr.bin
+          url: http://snapshots.linaro.org/components/kernel/zephyr/arm/zephyr/qemu_cortex_m3/latest/tests/crypto/test_hmac/test/zephyr.bin
 
 - boot:
     method: monitor

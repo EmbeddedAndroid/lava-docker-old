@@ -11,25 +11,24 @@ RUN echo 'lava-server   lava-server/instance-name string lava-docker-instance' |
  && echo 'locales locales/locales_to_be_generated multiselect C.UTF-8 UTF-8, en_US.UTF-8 UTF-8 ' | debconf-set-selections \
  && echo 'locales locales/default_environment_locale select en_US.UTF-8' | debconf-set-selections \
  && apt-get clean && apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y \
- android-tools-fastboot \
- cu \
- expect \
- lava-coordinator \
- lava-dev \
- lava-dispatcher \
- lava-tool \
- linaro-image-tools \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y -t jessie-backports \
  locales \
- openssh-server \
  postgresql \
  screen \
  sudo \
+ wget \
+ expect \
  vim \
  && service postgresql start \
+ && wget http://images.validation.linaro.org/production-repo/production-repo.key.asc \
+ && apt-key add production-repo.key.asc \
+ && echo 'deb http://images.validation.linaro.org/production-repo/ sid main' > /etc/apt/sources.list.d/lava.list \
+ && apt-get clean && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -t jessie-backports \
  lava \
  qemu-system \
+ && a2enmod proxy \
+ && a2enmod proxy_http \
  && a2dissite 000-default \
  && a2ensite lava-server \
  && /stop.sh \
@@ -48,8 +47,10 @@ COPY submittestjob.sh /home/lava/bin/
 COPY *.json *.py *.yaml /home/lava/bin/
 
 # Add misc utilities
-COPY createsuperuser.sh add-devices-to-lava.sh getAPItoken.sh lava-credentials.txt /home/lava/bin/
-COPY hack.patch /home/lava/hack.patch
+COPY createsuperuser.sh /home/lava/bin/
+COPY add-devices-to-lava.sh /home/lava/bin/
+COPY getAPItoken.sh /home/lava/bin/
+COPY lava-credentials.txt /home/lava/bin/
 COPY qemu.jinja2 /etc/dispatcher-config/devices/
 COPY nrf52-nitrogen.jinja2 /etc/dispatcher-config/devices/
 COPY nxp-k64f.jinja2 /etc/dispatcher-config/devices/
@@ -63,25 +64,13 @@ RUN /start.sh \
  && /home/lava/bin/createsuperuser.sh \
  && /stop.sh
 
-# CORTEX-M3: add python-sphinx-bootstrap-theme
-RUN apt-get clean && apt-get update && apt-get install -y python-sphinx-bootstrap-theme node-uglify docbook-xsl xsltproc python-mock \
- && rm -rf /var/lib/apt/lists/*
-
-# CORTEX-M3: apply patches to enable cortex-m3 support
+# Install latest from master
 RUN /start.sh \
  && git clone -b master https://git.linaro.org/lava/lava-dispatcher.git /home/lava/lava-dispatcher \
  && cd /home/lava/lava-dispatcher \
- && git fetch https://review.linaro.org/lava/lava-dispatcher refs/changes/08/14408/17 && git cherry-pick FETCH_HEAD \
- && git fetch https://review.linaro.org/lava/lava-dispatcher refs/changes/84/14484/7 && git cherry-pick FETCH_HEAD \
  && git clone -b master https://git.linaro.org/lava/lava-server.git /home/lava/lava-server \
  && cd /home/lava/lava-server \
- && git fetch https://review.linaro.org/lava/lava-server refs/changes/09/14409/5 && git cherry-pick FETCH_HEAD \
- && git fetch https://review.linaro.org/lava/lava-server refs/changes/10/14410/1 && git cherry-pick FETCH_HEAD \
- && git fetch https://review.linaro.org/lava/lava-server refs/changes/83/14483/3 && git cherry-pick FETCH_HEAD \
- && git apply /home/lava/hack.patch \
- && echo "CORTEX-M3: add build then install capability to debian-dev-build.sh" \
  && echo "cd \${DIR} && dpkg -i *.deb" >> /home/lava/lava-server/share/debian-dev-build.sh \
- && echo "CORTEX-M3: Installing patched versions of dispatcher & server" \
  && cd /home/lava/lava-dispatcher && /home/lava/lava-server/share/debian-dev-build.sh -p lava-dispatcher \
  && cd /home/lava/lava-server && /home/lava/lava-server/share/debian-dev-build.sh -p lava-server \
  && /stop.sh

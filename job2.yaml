@@ -23,11 +23,10 @@ actions:
     timeout:
       minutes: 3
     to: tmpfs
-    type: monitor
     images:
         zephyr:
           image_arg: -kernel {zephyr}
-          url: http://snapshots.linaro.org/components/kernel/zephyr/zephyr/qemu_cortex_m3/latest/tests/crypto/test_cbc/test/zephyr.bin
+          url: http://snapshots.linaro.org/components/kernel/zephyr/arm/zephyr/qemu_cortex_m3/latest/tests/crypto/test_cbc_mode/test/zephyr.bin
 
 - boot:
     method: monitor
@@ -36,7 +35,7 @@ actions:
 
 - test:
     monitors:
-    - name: Test AES128 CBC
+    - name: Test AES128 CBC Mode
       start: tc_start()
       end: PROJECT EXECUTION
       pattern: (?P<result>(PASS|FAIL))\s-\s(?P<test_case_id>\w+)

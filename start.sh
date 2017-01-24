@@ -29,6 +29,7 @@ start apache2
 start lava-server
 start lava-master
 start lava-slave
+start lava-server-gunicorn
 
 postgres-ready
 service apache2 reload #added after the website not running a few times on boot

@@ -10,30 +10,27 @@ COPY start.sh .
 RUN echo 'lava-server   lava-server/instance-name string lava-docker-instance' | debconf-set-selections \
  && echo 'locales locales/locales_to_be_generated multiselect C.UTF-8 UTF-8, en_US.UTF-8 UTF-8 ' | debconf-set-selections \
  && echo 'locales locales/default_environment_locale select en_US.UTF-8' | debconf-set-selections \
- && apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y \
- android-tools-fastboot \
- cu \
- expect \
- lava-coordinator \
- lava-dev \
- lava-dispatcher \
- lava-tool \
- linaro-image-tools \
+ && apt-get clean && apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y -t jessie-backports \
  locales \
- openssh-server \
  postgresql \
  screen \
  sudo \
+ wget \
+ expect \
  vim \
  && service postgresql start \
+ && wget http://images.validation.linaro.org/production-repo/production-repo.key.asc \
+ && apt-key add production-repo.key.asc \
+ && echo 'deb http://images.validation.linaro.org/production-repo/ sid main' > /etc/apt/sources.list.d/lava.list \
+ && apt-get clean && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -t jessie-backports \
  lava \
  qemu-system \
- qemu-system-arm \
+ && a2enmod proxy \
+ && a2enmod proxy_http \
  && a2dissite 000-default \
  && a2ensite lava-server \
- && a2enmod proxy* \
  && /stop.sh \
  && rm -rf /var/lib/apt/lists/*
 
@@ -78,21 +75,19 @@ RUN /start.sh \
  && /home/lava/bin/createsuperuser.sh \
  && /stop.sh
 
-# LATEST: add python-sphinx-bootstrap-theme
-RUN sudo apt-get update && apt-get install -y python-sphinx-bootstrap-theme node-uglify docbook-xsl xsltproc python-mock \
- && rm -rf /var/lib/apt/lists/*
-
-# Deploy the latest release branch
+# Install latest from master
 RUN /start.sh \
- && git clone -b release https://git.linaro.org/lava/lava-dispatcher.git /home/lava/lava-dispatcher \
- && git clone -b release https://git.linaro.org/lava/lava-server.git /home/lava/lava-server \
+ && git clone -b master https://git.linaro.org/lava/lava-dispatcher.git /home/lava/lava-dispatcher \
+ && cd /home/lava/lava-dispatcher \
+ && git clone -b master https://git.linaro.org/lava/lava-server.git /home/lava/lava-server \
+ && cd /home/lava/lava-server \
  && echo "cd \${DIR} && dpkg -i *.deb" >> /home/lava/lava-server/share/debian-dev-build.sh \
- && echo "Installing latest released versions of dispatcher & server" \
  && cd /home/lava/lava-dispatcher && /home/lava/lava-server/share/debian-dev-build.sh -p lava-dispatcher \
  && cd /home/lava/lava-server && /home/lava/lava-server/share/debian-dev-build.sh -p lava-server \
  && /stop.sh
 
 EXPOSE 22 80
+
 CMD /start.sh && /home/lava/bin/getAPItoken.sh && /home/lava/bin/add-devices-to-lava.sh && bash
 # Following CMD option starts the lava container without a shell and exposes the logs
 #CMD /start.sh && tail -f /var/log/lava-*/*

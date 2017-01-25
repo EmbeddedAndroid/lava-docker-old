@@ -30,8 +30,10 @@ RUN echo 'lava-server   lava-server/instance-name string lava-docker-instance' |
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -t jessie-backports \
  lava \
  qemu-system \
+ qemu-system-arm \
  && a2dissite 000-default \
  && a2ensite lava-server \
+ && a2enmod proxy* \
  && /stop.sh \
  && rm -rf /var/lib/apt/lists/*
 

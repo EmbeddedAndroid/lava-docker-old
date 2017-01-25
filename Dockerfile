@@ -32,6 +32,7 @@ RUN echo 'lava-server   lava-server/instance-name string lava-docker-instance' |
  qemu-system \
  && a2dissite 000-default \
  && a2ensite lava-server \
+ && a2enmod proxy* \
  && /stop.sh \
  && rm -rf /var/lib/apt/lists/*
 

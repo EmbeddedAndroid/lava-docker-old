@@ -30,10 +30,20 @@ RUN echo 'lava-server   lava-server/instance-name string lava-docker-instance' |
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -t jessie-backports \
  lava \
  qemu-system \
+ qemu-system-arm \
  && a2dissite 000-default \
  && a2ensite lava-server \
+ && a2enmod proxy* \
  && /stop.sh \
  && rm -rf /var/lib/apt/lists/*
+
+# (Optional) Add lava user SSH key and/or configuration
+# or mount a host file as a data volume (read-only)
+# e.g. -v /path/to/id_rsa_lava.pub:/home/lava/.ssh/authorized_keys:ro
+#COPY lava-credentials/.ssh /home/lava/.ssh
+
+# Remove comment to enable local proxy server (e.g. apt-cacher-ng)
+#RUN echo 'Acquire::http { Proxy "http://dockerproxy:3142"; };' >> /etc/apt/apt.conf.d/01proxy
 
 # Add lava user with super-user privilege
 RUN useradd -m -G plugdev lava \
@@ -47,8 +57,13 @@ RUN useradd -m -G plugdev lava \
 COPY submittestjob.sh /home/lava/bin/
 COPY *.json *.py *.yaml /home/lava/bin/
 
+RUN mkdir -p /etc/lava-dispatcher/devices \
+ && mkdir -p /etc/lava-dispatcher/device-types
+
 # Add misc utilities
-COPY createsuperuser.sh add-kvm-to-lava.sh getAPItoken.sh lava-credentials.txt /home/lava/bin/
+COPY createsuperuser.sh add-devices-to-lava.sh getAPItoken.sh lava-credentials.txt /home/lava/bin/
+COPY qemu-aarch64-01.conf qemu-aarch64-02.conf qemu-arm-01.conf qemu-arm-02.conf qemu-arm-cortex-a9-01.conf qemu-arm-cortex-a9-02.conf qemu-arm-cortex-a15-01.conf qemu-arm-cortex-a15-02.conf qemu-i386-01.conf qemu-i386-02.conf kvm-01.conf kvm-02.conf /etc/lava-dispatcher/devices/
+COPY qemu-i386.conf /etc/lava-dispatcher/device-types/
 
 # (Optional) Add lava user SSH key and/or configuration
 # or mount a host file as a data volume (read-only)
@@ -58,36 +73,26 @@ COPY createsuperuser.sh add-kvm-to-lava.sh getAPItoken.sh lava-credentials.txt /
 # Remove comment to enable local proxy server (e.g. apt-cacher-ng)
 #RUN echo 'Acquire::http { Proxy "http://dockerproxy:3142"; };' >> /etc/apt/apt.conf.d/01proxy
 
-# Create a admin user (Insecure note, this creates a default user, username: admin/admin)
+# Create a admin user (Insecure note, this creates a default user, username: kernel-ci/shazbot)
 RUN /start.sh \
  && /home/lava/bin/createsuperuser.sh \
  && /stop.sh
 
-# Add devices to the server (ugly, but it works)
-RUN /start.sh \
- && lava-server manage pipeline-worker --hostname lava-docker \
- && echo "lava-docker" > /home/lava/bin/hostname.txt \
- && /home/lava/bin/add-kvm-to-lava.sh \
- && /usr/share/lava-server/add_device.py kvm kvm01 \
- && /usr/share/lava-server/add_device.py qemu-aarch64 qemu-aarch64-01 \
- && echo "root_part=1" >> /etc/lava-dispatcher/devices/kvm01.conf \
- && /stop.sh
+# LATEST: add python-sphinx-bootstrap-theme
+RUN sudo apt-get update && apt-get install -y python-sphinx-bootstrap-theme node-uglify docbook-xsl xsltproc python-mock \
+ && rm -rf /var/lib/apt/lists/*
 
-# Add a Pipeline device
+# Deploy the latest release branch
 RUN /start.sh \
- && mkdir -p /etc/dispatcher-config/devices \
- && cp -a /usr/lib/python2.7/dist-packages/lava_scheduler_app/tests/devices/qemu01.jinja2 /etc/dispatcher-config/devices/ \
- && echo "{% set arch = 'amd64' %}">> /etc/dispatcher-config/devices/qemu01.jinja2 \
- && echo "{% set base_guest_fs_size = 2048 %}" >> /etc/dispatcher-config/devices/qemu01.jinja2 \
- && lava-server manage device-dictionary --hostname qemu01 --import /etc/dispatcher-config/devices/qemu01.jinja2 \
- && /stop.sh
-
-# To run jobs using python XMLRPC, we need the API token (really ugly)
-RUN /start.sh \
- && /home/lava/bin/getAPItoken.sh \
+ && git clone -b release https://git.linaro.org/lava/lava-dispatcher.git /home/lava/lava-dispatcher \
+ && git clone -b release https://git.linaro.org/lava/lava-server.git /home/lava/lava-server \
+ && echo "cd \${DIR} && dpkg -i *.deb" >> /home/lava/lava-server/share/debian-dev-build.sh \
+ && echo "Installing latest released versions of dispatcher & server" \
+ && cd /home/lava/lava-dispatcher && /home/lava/lava-server/share/debian-dev-build.sh -p lava-dispatcher \
+ && cd /home/lava/lava-server && /home/lava/lava-server/share/debian-dev-build.sh -p lava-server \
  && /stop.sh
 
 EXPOSE 22 80
-CMD /start.sh && bash
+CMD /start.sh && /home/lava/bin/getAPItoken.sh && /home/lava/bin/add-devices-to-lava.sh && bash
 # Following CMD option starts the lava container without a shell and exposes the logs
 #CMD /start.sh && tail -f /var/log/lava-*/*

@@ -1,5 +1,5 @@
 # Debian LAVA docker-container
-Designed to build and run a debian-based Docker container with LAVA pre-installed and pre-configured.
+esigned to build and run a debian-based Docker container with LAVA pre-installed and pre-configured.
 
 Note: At this time, running LAVA in Docker is not formally supported by Linaro or the LAVA team, but the team is exploring the ease of use that docker and containers enable.
 

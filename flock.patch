@@ -1,0 +1,26 @@
+From 4ebedfaad40f8ff35060e89f37db03f6337b052b Mon Sep 17 00:00:00 2001
+From: Tyler Baker <tyler.baker@linaro.org>
+Date: Fri, 27 Jan 2017 19:36:04 +0000
+Subject: [PATCH] Remove flock from pyocd
+
+Signed-off-by: Tyler Baker <tyler.baker@linaro.org>
+---
+ lava_dispatcher/pipeline/actions/boot/pyocd.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lava_dispatcher/pipeline/actions/boot/pyocd.py b/lava_dispatcher/pipeline/actions/boot/pyocd.py
+index 659e90ce..96c360b2 100644
+--- a/lava_dispatcher/pipeline/actions/boot/pyocd.py
++++ b/lava_dispatcher/pipeline/actions/boot/pyocd.py
+@@ -95,7 +95,7 @@ class MonitorPyOCDAction(Action):
+         boot = self.job.device['actions']['boot']['methods']['pyocd']
+         pyocd_binary = boot['parameters']['command']
+         self.errors = infrastructure_error(pyocd_binary)
+-        self.sub_command = ['flock -o /var/lock/lava-pyocd.lck', pyocd_binary]
++        self.sub_command = [pyocd_binary]
+         self.sub_command.extend(boot['parameters'].get('options', []))
+         if self.job.device['board_id'] == '0000000000':
+             self.errors = "board_id unset"
+-- 
+2.11.0
+
